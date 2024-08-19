@@ -136,6 +136,15 @@
             font-style: italic;
             color: #888;
         }
+
+        /* New styles for clicked items */
+        .mod-item.clicked {
+            background-color: #2a4d69;
+        }
+
+        .mod-item.clicked:hover {
+            background-color: #3a6d89;
+        }
     </style>
 </head>
 
@@ -175,6 +184,7 @@
                 if (filter && !mod.toLowerCase().includes(filter.toLowerCase())) return;
 
                 const isChecked = localStorage.getItem(mod) === 'true';
+                const isClicked = localStorage.getItem(`${mod}_clicked`) === 'true';
 
                 const checkboxWrapper = document.createElement('div');
                 checkboxWrapper.className = 'checkbox-wrapper';
@@ -195,9 +205,12 @@
 
                 const modItem = document.createElement('div');
                 modItem.className = 'mod-item';
+                if (isClicked) modItem.classList.add('clicked');
                 modItem.addEventListener('click', (e) => {
                     if (e.target !== checkbox) {
                         window.open(`https://www.google.com/search?q=${encodeURIComponent(mod)}`, '_blank');
+                        modItem.classList.add('clicked');
+                        localStorage.setItem(`${mod}_clicked`, 'true');
                     }
                 });
 
