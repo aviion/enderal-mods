@@ -11,25 +11,31 @@
             background-color: #2b2b2b;
             color: #f0f0f0;
             margin: 0;
-            padding: 20px;
+            padding: 0;
             display: flex;
-            justify-content: center;
-            align-items: center;
             min-height: 100vh;
         }
 
-        #content {
-            max-width: 600px;
-            width: 100%;
+        #sidebar {
+            width: 250px;
             background-color: #1e1e1e;
             padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        #content {
+            margin-left: 270px;
+            padding: 20px;
+            flex-grow: 1;
+            max-width: 800px;
         }
 
         h1 {
             color: #ffcc00;
             text-align: center;
+            margin-top: 0;
         }
 
         #mod-list {
@@ -70,8 +76,8 @@
         }
 
         input[type="checkbox"] {
-            width: 26px;
-            height: 26px;
+            width: 20px;
+            height: 20px;
             cursor: pointer;
             appearance: none;
             background-color: #444;
@@ -91,10 +97,10 @@
         input[type="checkbox"]:checked::before {
             content: '';
             position: absolute;
-            top: 4px;
-            left: 7px;
-            width: 5px;
-            height: 10px;
+            top: 3px;
+            left: 6px;
+            width: 4px;
+            height: 8px;
             border: solid #2b2b2b;
             border-width: 0 2px 2px 0;
             transform: rotate(45deg);
@@ -104,18 +110,18 @@
             border-color: #ffcc00;
         }
 
-        #checkbox-position-toggle {
-            margin-bottom: 20px;
+        .toggle-option {
+            margin-bottom: 10px;
             display: flex;
             align-items: center;
         }
 
-        #position-toggle-label {
+        .toggle-option label {
             padding-left: 10px;
         }
 
         #search-input {
-            width: 96%;
+            width: 100%;
             padding: 10px;
             margin-bottom: 20px;
             background-color: #333;
@@ -123,6 +129,7 @@
             border-radius: 5px;
             color: #f0f0f0;
             font-size: 16px;
+            box-sizing: border-box;
         }
 
         #search-input:focus {
@@ -131,7 +138,6 @@
         }
 
         .mod-count {
-            text-align: right;
             margin-top: 10px;
             font-style: italic;
             color: #888;
@@ -145,10 +151,9 @@
             background-color: #3a6d89;
         }
 
-        /* Updated styles for export/import buttons */
         .button-group {
             display: flex;
-            justify-content: flex-end;
+            justify-content: space-between;
             margin-bottom: 20px;
             gap: 10px;
         }
@@ -175,21 +180,37 @@
 </head>
 
 <body>
-    <div id="content">
-        <h1>Select Your Mods</h1>
+    <div id="sidebar">
+        <h1>Mod Selection</h1>
         <div class="button-group">
             <button onclick="exportState()">Export</button>
             <label for="file-input" class="file-input-label">Import</label>
             <input type="file" id="file-input" onchange="importState(event)" />
         </div>
-        <label id="checkbox-position-toggle">
+        <div class="toggle-option">
             <input type="checkbox" id="position-toggle" onchange="toggleCheckboxPosition()">
-            <label for="position-toggle" id="position-toggle-label">Move checkbox to the right</label>
-        </label>
+            <label for="position-toggle">Move checkbox to the right</label>
+        </div>
+        <div class="toggle-option">
+            <input type="checkbox" id="hide-checked" onchange="filterMods()">
+            <label for="hide-checked">Hide checked mods</label>
+        </div>
+        <div class="toggle-option">
+            <input type="checkbox" id="hide-visited" onchange="filterMods()">
+            <label for="hide-visited">Hide visited mods</label>
+        </div>
         <input type="text" id="search-input" placeholder="Search mods..." oninput="filterMods()">
         <div class="mod-count">
             Selected: <span id="selected-count">0</span> / <span id="total-count">0</span>
         </div>
+        <div class="mod-count">
+            Hidden (checked): <span id="hidden-checked-count">0</span>
+        </div>
+        <div class="mod-count">
+            Hidden (visited): <span id="hidden-visited-count">0</span>
+        </div>
+    </div>
+    <div id="content">
         <div id="mod-list"></div>
     </div>
     <script>
@@ -211,11 +232,23 @@
             const modListDiv = document.getElementById('mod-list');
             modListDiv.innerHTML = '';
 
+            const hideChecked = document.getElementById('hide-checked').checked;
+            const hideVisited = document.getElementById('hide-visited').checked;
+
+            let hiddenCheckedCount = 0;
+            let hiddenVisitedCount = 0;
+
             mods.forEach(mod => {
                 if (filter && !mod.toLowerCase().includes(filter.toLowerCase())) return;
 
                 const isChecked = localStorage.getItem(mod) === 'true';
                 const isClicked = localStorage.getItem(`${mod}_clicked`) === 'true';
+
+                if ((hideChecked && isChecked) || (hideVisited && isClicked)) {
+                    if (isChecked) hiddenCheckedCount++;
+                    if (isClicked) hiddenVisitedCount++;
+                    return;
+                }
 
                 const checkboxWrapper = document.createElement('div');
                 checkboxWrapper.className = 'checkbox-wrapper';
@@ -242,6 +275,7 @@
                         window.open(`https://www.google.com/search?q=${encodeURIComponent(mod)}`, '_blank');
                         modItem.classList.add('clicked');
                         localStorage.setItem(`${mod}_clicked`, 'true');
+                        updateModCount();
                     }
                 });
 
@@ -257,6 +291,9 @@
 
                 modListDiv.appendChild(modItem);
             });
+
+            document.getElementById('hidden-checked-count').textContent = hiddenCheckedCount;
+            document.getElementById('hidden-visited-count').textContent = hiddenVisitedCount;
         }
 
         function toggleMod(modName, isChecked) {
@@ -278,6 +315,7 @@
             const selectedCount = mods.filter(mod => localStorage.getItem(mod) === 'true').length;
             document.getElementById('selected-count').textContent = selectedCount;
             document.getElementById('total-count').textContent = mods.length;
+            filterMods(); // Re-render to update hidden counts
         }
 
         function exportState() {
